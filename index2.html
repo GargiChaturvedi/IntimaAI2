@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IntimaAI — Medical Coding Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080808;
+    --surface:   #111111;
+    --surface2:  #1a1a1a;
+    --border:    #2a1a2e;
+    --accent:    #e91e8c;
+    --accent2:   #00c8e0;
+    --warn:      #ff6b6b;
+    --text:      #f0eef5;
+    --muted:     #8a7a96;
+    --code:      #00c8e0;
+    --tag-bg:    rgba(233,30,140,0.12);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(233,30,140,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,224,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 40px 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo-mark {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, #e91e8c, #00c8e0);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .logo-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+  .logo-text p {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 1px;
+  }
+
+  .header-badge {
+    margin-left: auto;
+    background: var(--tag-bg);
+    border: 1px solid rgba(233,30,140,0.35);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Two-column layout ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card.full        { grid-column: 1 / -1; animation-delay: 0.15s; }
+
+  .card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .card h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 17px;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  /* ── Form elements ── */
+  textarea, select, input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  textarea:focus, select:focus, input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(233,30,140,0.12);
+  }
+
+  textarea { min-height: 160px; line-height: 1.6; }
+
+  select option { background: var(--surface2); }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  .field { margin-bottom: 14px; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #e91e8c, #00c8e0);
+    color: #0b0f1a;
+    width: 100%;
+    justify-content: center;
+    margin-top: 4px;
+  }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ── Results ── */
+  .result-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    min-height: 200px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-box.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+  }
+
+  .result-box .code-token {
+    color: var(--code);
+    font-weight: 500;
+  }
+
+  /* Loading shimmer */
+  .shimmer {
+    background: linear-gradient(90deg,
+      var(--surface2) 25%,
+      var(--surface) 50%,
+      var(--surface2) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 4px;
+    height: 14px;
+    margin-bottom: 10px;
+  }
+  .shimmer:nth-child(2) { width: 80%; animation-delay: 0.1s; }
+  .shimmer:nth-child(3) { width: 60%; animation-delay: 0.2s; }
+
+  /* ── Code tags ── */
+  .code-tag {
+    display: inline-block;
+    background: var(--tag-bg);
+    border: 1px solid rgba(233,30,140,0.25);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 2px;
+  }
+
+  .code-tag.cpt {
+    background: rgba(0,200,224,0.1);
+    border-color: rgba(0,200,224,0.2);
+    color: var(--accent2);
+  }
+
+  .code-tag.deny {
+    background: rgba(255,107,107,0.1);
+    border-color: rgba(255,107,107,0.2);
+    color: var(--warn);
+  }
+
+  /* ── Status bar ── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.idle { background: var(--muted); animation: none; }
+  .status-dot.error { background: var(--warn); animation: none; }
+
+  /* ── History list ── */
+  .history-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+
+  .history-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.15s;
+  }
+  .history-item:hover { border-color: var(--accent); }
+
+  .history-item .task-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--tag-bg);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .history-item .note-preview {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+
+  .empty-history {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-mark">IA</div>
+    <div class="logo-text">
+      <h1>IntimaAI</h1>
+      <p>Powered by Amazon Bedrock · Nova 2 Lite (Fine-tuned)</p>
+    </div>
+    <span class="header-badge">HIPAA-READY</span>
+  </header>
+
+  <!-- Main grid -->
+  <div class="grid">
+
+    <!-- Input card -->
+    <div class="card">
+      <div class="card-label">Input</div>
+      <h2>Clinical Note</h2>
+
+      <!-- Task tabs -->
+      <div class="tabs">
+        <button class="tab active" data-task="analyze">Full Analysis</button>
+        <button class="tab" data-task="icd10">ICD-10</button>
+        <button class="tab" data-task="cpt">CPT</button>
+        <button class="tab" data-task="payer_policy">Payer Policy</button>
+      </div>
+
+      <div class="field">
+        <label>Clinical Note / Scenario</label>
+        <textarea id="clinicalNote" placeholder="Paste or type the clinical note here...
+
+Example: 68-year-old male with Type 2 diabetes mellitus presents with stage 3 chronic kidney disease and uncontrolled hypertension. Patient reports shortness of breath on exertion. Recent HbA1c 9.2%."></textarea>
+      </div>
+
+      <div class="field" id="payerField" style="display:none">
+        <label>Payer (for policy check)</label>
+        <select id="payerSelect">
+          <option value="">Select payer...</option>
+          <option>Aetna</option>
+          <option>UnitedHealthcare</option>
+          <option>BCBS</option>
+          <option>Cigna</option>
+          <option>Humana</option>
+          <option>Medicare</option>
+          <option>Medicaid</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" id="analyzeBtn" onclick="runAnalysis()">
+        <span id="btnIcon">⚕</span>
+        <span id="btnText">Analyze &amp; Assign Codes</span>
+      </button>
+    </div>
+
+    <!-- Results card -->
+    <div class="card">
+      <div class="card-label">Output</div>
+      <h2>Coding Results</h2>
+
+      <div class="status-bar">
+        <div class="status-dot idle" id="statusDot"></div>
+        <span id="statusText">Ready</span>
+      </div>
+
+      <div class="result-box empty" id="resultBox">
+        Results will appear here
+      </div>
+    </div>
+
+    <!-- History card -->
+    <div class="card full">
+      <div class="card-label">Session</div>
+      <h2>Query History</h2>
+      <ul class="history-list" id="historyList">
+        <li class="empty-history">No queries yet this session</li>
+      </ul>
+    </div>
+
+  </div><!-- /grid -->
+</div><!-- /shell -->
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────
+const API_BASE = "http://localhost:5000"; // Update to your deployed backend URL
+const ENDPOINT_MAP = {
+  analyze:      "/api/analyze",
+  icd10:        "/api/icd10",
+  cpt:          "/api/cpt",
+  payer_policy: "/api/payer-policy"
+};
+
+// ── State ─────────────────────────────────────────────────────────────────
+let currentTask = "analyze";
+let history = [];
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentTask = tab.dataset.task;
+    document.getElementById("payerField").style.display =
+      currentTask === "payer_policy" ? "block" : "none";
+
+    const btnText = {
+      analyze:      "Analyze & Assign Codes",
+      icd10:        "Assign ICD-10 Codes",
+      cpt:          "Assign CPT Codes",
+      payer_policy: "Check Payer Policy"
+    };
+    document.getElementById("btnText").textContent = btnText[currentTask];
+  });
+});
+
+// ── Main analysis function ────────────────────────────────────────────────
+async function runAnalysis() {
+  const note = document.getElementById("clinicalNote").value.trim();
+  if (!note) {
+    showResult("⚠️ Please enter a clinical note first.", "error");
+    return;
+  }
+
+  const btn = document.getElementById("analyzeBtn");
+  btn.disabled = true;
+  document.getElementById("btnIcon").textContent = "◌";
+  document.getElementById("btnText").textContent = "Analyzing...";
+  setStatus("processing", "Processing...");
+  showLoading();
+
+  const payload = { clinical_note: note };
+  if (currentTask === "payer_policy") {
+    const payer = document.getElementById("payerSelect").value;
+    if (payer) payload.payer = payer;
+  }
+
+  try {
+    const res = await fetch(API_BASE + ENDPOINT_MAP[currentTask], {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+
+    showResult(data.result, "success");
+    addToHistory(currentTask, note, data.result);
+    setStatus("ready", "Done");
+
+  } catch (err) {
+    showResult(`❌ Error: ${err.message}\n\nMake sure your backend (app.py) is running at ${API_BASE}`, "error");
+    setStatus("error", "Error");
+  } finally {
+    btn.disabled = false;
+    document.getElementById("btnIcon").textContent = "⚕";
+    document.getElementById("btnText").textContent = {
+      analyze:      "Analyze & Assign Codes",
+      icd10:        "Assign ICD-10 Codes",
+      cpt:          "Assign CPT Codes",
+      payer_policy: "Check Payer Policy"
+    }[currentTask];
+  }
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────
+function showLoading() {
+  const box = document.getElementById("resultBox");
+  box.classList.remove("empty");
+  box.innerHTML = `
+    <div class="shimmer"></div>
+    <div class="shimmer"></div>
+    <div class="shimmer"></div>
+  `;
+}
+
+function showResult(text, type) {
+  const box = document.getElementById("resultBox");
+  box.classList.remove("empty");
+
+  // Highlight ICD-10 and CPT code patterns
+  const formatted = text
+    .replace(/\b([A-Z]\d{2}\.?\w{0,4})\b/g, '<span class="code-token">$1</span>')
+    .replace(/\bDenied\b/gi, '<span style="color:var(--warn)">Denied</span>')
+    .replace(/\bApproved\b/gi, '<span style="color:var(--accent)">Approved</span>');
+
+  box.innerHTML = formatted;
+
+  if (type === "error") {
+    box.style.borderColor = "var(--warn)";
+  } else {
+    box.style.borderColor = "var(--border)";
+  }
+}
+
+function setStatus(state, text) {
+  const dot = document.getElementById("statusDot");
+  const label = document.getElementById("statusText");
+  dot.className = "status-dot";
+  if (state === "processing") {
+    // pulse animation already set by default
+  } else if (state === "error") {
+    dot.classList.add("error");
+  } else {
+    dot.classList.add("idle");
+  }
+  label.textContent = text;
+}
+
+function addToHistory(task, note, result) {
+  history.unshift({ task, note, result, ts: new Date() });
+
+  const list = document.getElementById("historyList");
+  list.innerHTML = history.slice(0, 8).map((item, i) => `
+    <li class="history-item" onclick="restoreHistory(${i})">
+      <span class="task-badge">${item.task.replace("_", " ").toUpperCase()}</span>
+      <span class="note-preview">${item.note.substring(0, 80)}...</span>
+    </li>
+  `).join("");
+}
+
+function restoreHistory(index) {
+  const item = history[index];
+  document.getElementById("clinicalNote").value = item.note;
+  showResult(item.result, "success");
+}
+
+// ── Enter to submit ───────────────────────────────────────────────────────
+document.getElementById("clinicalNote").addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.ctrlKey) runAnalysis();
+});
+</script>
+</body>
+</html>
